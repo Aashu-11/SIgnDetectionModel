@@ -1,0 +1,543 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignSense - Sign Language Recognition</title>
+    <style>
+        :root {
+            --primary-color: #3E92CC;
+            --secondary-color: #0A2463;
+            --accent-color: #E8F1F2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --gradient-primary: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f6f8fa 0%, #e9ecef 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            gap: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: var(--gradient-primary);
+            border-radius: 2px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .video-section {
+            position: relative;
+            background: var(--card-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.3s ease;
+        }
+
+        .video-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .video-container {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        .corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary-color);
+        }
+
+        .top-left {
+            top: 0;
+            left: 0;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .top-right {
+            top: 0;
+            right: 0;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .bottom-left {
+            bottom: 0;
+            left: 0;
+            border-right: none;
+            border-top: none;
+        }
+
+        .bottom-right {
+            bottom: 0;
+            right: 0;
+            border-left: none;
+            border-top: none;
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-text {
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .recognition-section {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .letter-display {
+            font-size: 6rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            text-align: center;
+            min-height: 8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent-color), white);
+            border-radius: 12px;
+            margin: 1rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .confidence-container {
+            margin-top: 1.5rem;
+        }
+
+        .confidence-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .confidence-bar {
+            height: 100%;
+            background: var(--success-color);
+            border-radius: 4px;
+            transition: width 0.3s ease-out;
+        }
+
+        .confidence-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .history-container {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 1rem;
+            background: var(--accent-color);
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+
+        .history-letter {
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--secondary-color);
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease;
+        }
+
+        .history-letter:hover {
+            transform: translateY(-2px);
+        }
+
+        .word-builder {
+            margin-top: 2rem;
+        }
+
+        .word-display {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            min-height: 4rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--gradient-primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .instruction-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .instruction-card h3 {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .instruction-card p {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .letter-display {
+                font-size: 4rem;
+                min-height: 6rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>SignSense</h1>
+            <p>Real-time Sign Language Recognition System</p>
+        </header>
+
+        <div class="main-content">
+            <div class="video-section">
+                <div class="video-container">
+                    <img class="video-feed" src="https://images.pexels.com/photos/3771807/pexels-photo-3771807.jpeg" alt="Video Stream">
+                    <div class="video-overlay">
+                        <div class="scan-line"></div>
+                        <div class="corner top-left"></div>
+                        <div class="corner top-right"></div>
+                        <div class="corner bottom-left"></div>
+                        <div class="corner bottom-right"></div>
+                    </div>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Live</span>
+                    </div>
+                </div>
+
+                <div class="instruction-card">
+                    <h3>How to Use</h3>
+                    <p>Position your hand clearly in the camera view to detect American Sign Language letters.</p>
+                    <p>For best results, use good lighting and make clear hand gestures against a simple background.</p>
+                </div>
+            </div>
+
+            <div class="recognition-section">
+                <div class="result-card">
+                    <h2>Detected Letter</h2>
+                    <div class="letter-display" id="letter-display">A</div>
+                    <div class="confidence-container">
+                        <div class="confidence-bar-container">
+                            <div class="confidence-bar" id="confidence-bar" style="width: 75%"></div>
+                        </div>
+                        <div class="confidence-text">
+                            <span>Confidence</span>
+                            <span id="confidence-text">75%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h2>Letter History</h2>
+                    <div class="history-container" id="letter-history">
+                        <div class="history-letter">A</div>
+                        <div class="history-letter">B</div>
+                        <div class="history-letter">C</div>
+                    </div>
+
+                    <div class="word-builder">
+                        <h2>Formed Word</h2>
+                        <div class="word-display" id="word-display">ABC</div>
+                        <div class="controls">
+                            <button id="add-letter">Add Letter</button>
+                            <button id="add-space">Add Space</button>
+                            <button id="clear-word">Clear Word</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentLetter = null;
+        let letterHistory = [];
+        let currentWord = '';
+        
+        // Update prediction
+        function updatePrediction() {
+            fetch('/get_prediction')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.prediction) {
+                        // Update displayed letter
+                        document.getElementById('letter-display').textContent = data.prediction;
+                        currentLetter = data.prediction;
+                        
+                        // Update confidence bar
+                        const confidencePercentage = (data.confidence * 100).toFixed(1);
+                        document.getElementById('confidence-bar').style.width = `${confidencePercentage}%`;
+                        document.getElementById('confidence-text').textContent = `Confidence: ${confidencePercentage}%`;
+                        
+                        // Color the confidence bar based on confidence level
+                        const confidenceBar = document.getElementById('confidence-bar');
+                        if (data.confidence < 0.5) {
+                            confidenceBar.style.backgroundColor = '#e74c3c'; // Red for low confidence
+                        } else if (data.confidence < 0.75) {
+                            confidenceBar.style.backgroundColor = '#f39c12'; // Orange for medium confidence
+                        } else {
+                            confidenceBar.style.backgroundColor = '#2ecc71'; // Green for high confidence
+                        }
+                    } else {
+                       document.getElementById('letter-display').textContent = '-';
+                        document.getElementById('confidence-bar').style.width = '0%';
+                        document.getElementById('confidence-text').textContent = 'Confidence: 0%';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching prediction:', error);
+                });
+        }
+        
+        // Add letter to formed word
+        document.getElementById('add-letter').addEventListener('click', () => {
+            if (currentLetter) {
+                // Add letter to word
+                currentWord += currentLetter;
+                document.getElementById('word-display').textContent = currentWord;
+                
+                // Add to history
+                addLetterToHistory(currentLetter);
+            }
+        });
+        
+        // Clear word
+        document.getElementById('clear-word').addEventListener('click', () => {
+            currentWord = '';
+            document.getElementById('word-display').textContent = '';
+            
+            // Clear history as well
+            letterHistory = [];
+            document.getElementById('letter-history').innerHTML = '';
+        });
+        
+        // Add space
+        document.getElementById('space').addEventListener('click', () => {
+            currentWord += ' ';
+            document.getElementById('word-display').textContent = currentWord;
+            
+            // Add space indicator to history
+            addLetterToHistory('␣');
+        });
+        
+        // Add letter to history display
+        function addLetterToHistory(letter) {
+            letterHistory.push(letter);
+            
+            // Only keep last 10 letters in history
+            if (letterHistory.length > 10) {
+                letterHistory.shift();
+            }
+            
+            // Update history display
+            const historyContainer = document.getElementById('letter-history');
+            historyContainer.innerHTML = '';
+            
+            letterHistory.forEach(ltr => {
+                const letterElement = document.createElement('div');
+                letterElement.className = 'history-letter';
+                letterElement.textContent = ltr;
+                historyContainer.appendChild(letterElement);
+            });
+        }
+        
+        // Update prediction every 100ms
+        setInterval(updatePrediction, 100);
+    </script>
+</body>
+</html>
+    
